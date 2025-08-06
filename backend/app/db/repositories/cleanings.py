@@ -1,3 +1,5 @@
+from typing import List
+
 from app.db.repositories.base import BaseRepository
 from app.models.cleaning import CleaningCreate, CleaningInDB, CleaningUpdate
 
@@ -12,6 +14,11 @@ GET_CLEANING_BY_ID_QUERY = """
     SELECT id, name, description, price, cleaning_type
     FROM cleanings
     WHERE id = :id
+"""
+
+GET_CLEANINGS_QUERY = """
+    SELECT id, name, description, price, cleaning_type
+    FROM cleanings
 """
 
 
@@ -30,3 +37,7 @@ class CleaningsRepository(BaseRepository):
         cleaning = await self.db.fetch_one(query=GET_CLEANING_BY_ID_QUERY, values={'id': id})
 
         return CleaningInDB(**cleaning) if cleaning else None
+
+    async def get_cleanings(self) -> List[CleaningInDB]:
+        cleanings = await self.db.fetch_all(query=GET_CLEANINGS_QUERY)
+        return [CleaningInDB(**l) for l in cleanings]

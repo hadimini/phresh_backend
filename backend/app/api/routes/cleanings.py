@@ -10,16 +10,14 @@ from app.models.cleaning import CleaningCreate, CleaningPublic
 router = APIRouter()
 
 
-@router.get("/")
-async def get_cleanings() -> List[dict]:
-    cleanings = [
-        {"id": 1, "name": "My house", "cleaning_type": "full_clean", "price_per_hour": 29.99},
-        {"id": 2, "name": "Someone else's house", "cleaning_type": "spot_clean", "price_per_hour": 19.99}
-    ]
-    return cleanings
+@router.get('/', response_model=List[CleaningPublic], name='cleanings:get-cleanings')
+async def get_cleanings(
+        cleanings_repo: CleaningsRepository = Depends(get_repository(CleaningsRepository))
+) -> List[dict]:
+    return await cleanings_repo.get_cleanings()
 
 
-@router.post("/", response_model=CleaningPublic, name="cleanings:create-cleaning", status_code=HTTP_201_CREATED)
+@router.post('/', response_model=CleaningPublic, name='cleanings:create-cleaning', status_code=HTTP_201_CREATED)
 async def create_cleaning(
         new_cleaning: CleaningCreate = Body(..., embed=True),
         cleanings_repo: CleaningsRepository = Depends(get_repository(CleaningsRepository))
