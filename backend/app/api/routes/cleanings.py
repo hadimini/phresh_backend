@@ -1,8 +1,14 @@
 from typing import List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body, Depends
+from starlette.status import HTTP_201_CREATED
+
+from app.api.dependencies.database import get_repository
+from app.db.repositories.cleanings import CleaningsRepository
+from app.models.cleaning import CleaningCreate, CleaningPublic
 
 router = APIRouter()
+
 
 @router.get("/")
 async def get_cleanings() -> List[dict]:
@@ -11,3 +17,12 @@ async def get_cleanings() -> List[dict]:
         {"id": 2, "name": "Someone else's house", "cleaning_type": "spot_clean", "price_per_hour": 19.99}
     ]
     return cleanings
+
+
+@router.post("/", response_model=CleaningPublic, name="cleanings:create-cleaning", status_code=HTTP_201_CREATED)
+async def create_cleaning(
+        new_cleaning: CleaningCreate = Body(..., embed=True),
+        cleaning_repo: CleaningsRepository = Depends(get_repository(CleaningsRepository))
+) -> CleaningPublic:
+    created_cleaning = await cleaning_repo.create_cleaning(new_cleaning=new_cleaning)
+    return created_cleaning
