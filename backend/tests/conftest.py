@@ -10,18 +10,19 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 
 
-# Apply migrations at the beginning and the end of testing session
-@pytest.fixture(scope='session')
+# Apply migrations at beginning and end of testing session
+@pytest.fixture(scope="session")
 def apply_migrations():
-    warnings.filterwarnings('ignore', category=DeprecationWarning)
-    os.environ['TESTING'] = 1
-    config = Config('.env')
-    alembic.command.upgrade(config, 'head')
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    os.environ["TESTING"] = "1"
+    config = Config("alembic.ini")
+
+    alembic.command.upgrade(config, "head")
     yield
-    alembic.command.downgrade(config, 'base')
+    alembic.command.downgrade(config, "base")
 
 
-# Create a new app for testing
+# Create a new application for testing
 @pytest.fixture
 def app(apply_migrations: None) -> FastAPI:
     from app.api.server import get_application
@@ -36,11 +37,13 @@ def db(app: FastAPI) -> Database:
 
 
 # Make requests in our tests
-async def get_client(app: FastAPI) -> AsyncClient:
+@pytest.fixture
+async def client(app: FastAPI) -> AsyncClient:
     async with LifespanManager(app):
         async with AsyncClient(
-            app=app,
-            base_url='http://testserver',
-            headers={'Content-Type': 'application/json'},
+                app=app,
+                base_url="http://testserver",
+                headers={"Content-Type": "application/json"}
         ) as client:
             yield client
+
