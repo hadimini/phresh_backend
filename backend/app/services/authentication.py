@@ -4,7 +4,6 @@ import bcrypt
 import jwt
 from passlib.context import CryptContext
 
-from app.models.user import UserPasswordUpdate
 from app.core.config import SECRET_KEY, JWT_ALGORITHM, JWT_AUDIENCE, JWT_TOKEN_PREFIX, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.models.token import JWTMeta, JWTCreds, JWTPayload
 from app.models.user import UserPasswordUpdate, UserInDB
