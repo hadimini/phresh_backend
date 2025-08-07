@@ -3,7 +3,7 @@ from typing import List, Union, Optional, Type
 import jwt
 import pytest
 from databases import Database
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from httpx import AsyncClient
 from pydantic import ValidationError
 from starlette.datastructures import Secret
@@ -161,6 +161,38 @@ class TestAuthTokens:
             )
 
             jwt.decode(access_token, str(SECRET_KEY), audience=JWT_AUDIENCE, algorithms=[JWT_ALGORITHM])
+
+    async def test_can_retrieve_username_from_token(
+            self, app: FastAPI, client: AsyncClient, test_user: UserInDB
+    ) -> None:
+        token = auth_service.create_access_token_for_user(user=test_user, secret_key=str(SECRET_KEY))
+        username = auth_service.get_username_from_token(token=token, secret_key=str(SECRET_KEY))
+        assert username == test_user.username
+
+    @pytest.mark.parametrize(
+        "secret, wrong_token",
+        (
+                (SECRET_KEY, "asdf"),  # use wrong token
+                (SECRET_KEY, ""),  # use wrong token
+                (SECRET_KEY, None),  # use wrong token
+                ("ABC123", "use correct token"),  # use wrong secret
+        ),
+    )
+    async def test_error_when_token_or_secret_is_wrong(
+            self,
+            app: FastAPI,
+            client: AsyncClient,
+            test_user: UserInDB,
+            secret: Union[Secret, str],
+            wrong_token: Optional[str],
+    ) -> None:
+        token = auth_service.create_access_token_for_user(user=test_user, secret_key=str(SECRET_KEY))
+
+        if wrong_token == "use correct token":
+            wrong_token = token
+
+        with pytest.raises(HTTPException):
+            username = auth_service.get_username_from_token(token=wrong_token, secret_key=str(secret))
 
 
 class TestUserLogin:
