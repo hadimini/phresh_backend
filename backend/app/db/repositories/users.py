@@ -62,7 +62,6 @@ class UsersRepository(BaseRepository):
                 detail="That username is already taken. Please try another one."
             )
 
-        # created_user = await self.db.fetch_one(query=REGISTER_NEW_USER_QUERY, values={**new_user.dict(), "salt": "123"})
         user_password_update = self.auth_service.create_salt_and_hashed_password(plaintext_password=new_user.password)
         new_user_params = new_user.copy(update=user_password_update.dict())
         created_user = await self.db.fetch_one(query=REGISTER_NEW_USER_QUERY, values=new_user_params.dict())
