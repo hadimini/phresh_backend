@@ -16,7 +16,7 @@ class ProfileCreate(ProfileBase):
     """
     The only field required to create a profile is the users id
     """
-    pass
+    user_id: int
 
 
 class ProfileUpdate(ProfileBase):
