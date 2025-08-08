@@ -19,6 +19,13 @@ class ProfileCreate(ProfileBase):
     pass
 
 
+class ProfileUpdate(ProfileBase):
+    """
+    Allow users to update any or no fields, as long as it's not user_id
+    """
+    pass
+
+
 class ProfileInDB(IDModelMixin, DateTimeModelMixin, ProfileBase):
     user_id: int
     username: Optional[str]
