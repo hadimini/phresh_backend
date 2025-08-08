@@ -16,6 +16,7 @@ from starlette.status import (
 
 from app.core.config import SECRET_KEY, JWT_ALGORITHM, JWT_AUDIENCE, JWT_TOKEN_PREFIX, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.db.repositories.users import UsersRepository
+from app.models.profile import ProfilePublic
 from app.models.user import UserInDB, UserPublic
 from app.services import auth_service
 
@@ -48,13 +49,13 @@ class TestUserRegistration:
         assert res.status_code == HTTP_201_CREATED
 
         # ensure that the user now exists in the db
-        user_in_db = await user_repo.get_user_by_email(email=new_user["email"])
+        user_in_db = await user_repo.get_user_by_email(email=new_user["email"], populate=False)
         assert user_in_db is not None
         assert user_in_db.email == new_user["email"]
         assert user_in_db.username == new_user["username"]
 
         # check that the user returned in the response is equal to the user in the database
-        created_user = UserPublic(**res.json()).dict(exclude={"access_token"})
+        created_user = UserPublic(**res.json()).dict(exclude={"access_token", "profile"})
         assert created_user == user_in_db.dict(exclude={"password", "salt"})
 
     @pytest.mark.parametrize(
@@ -98,7 +99,7 @@ class TestUserRegistration:
 
         # ensure that the users password is hashed in the db
         # and that we can verify it using our auth service
-        user_in_db = await user_repo.get_user_by_email(email=new_user["email"])
+        user_in_db = await user_repo.get_user_by_email(email=new_user["email"], populate=False)
         assert user_in_db is not None
         assert user_in_db.salt is not None and user_in_db.salt != "123"
         assert user_in_db.password != new_user["password"]
@@ -285,3 +286,57 @@ class TestUserMe:
             app.url_path_for("users:get-current-user"), headers={"Authorization": f"{jwt_prefix} {token}"}
         )
         assert res.status_code == HTTP_401_UNAUTHORIZED
+
+
+class TestProfileManagement:
+    @pytest.mark.parametrize(
+        "attr, value",
+        (
+                ("full_name", "Lebron James"),
+                ("phone_number", "555-333-1000"),
+                ("bio", "This is a test bio"),
+                ("image", "http://testimages.com/testimage"),
+        ),
+    )
+    async def test_user_can_update_own_profile(
+            self,
+            app: FastAPI,
+            authorized_client: AsyncClient,
+            test_user: UserInDB,
+            attr: str,
+            value: str,
+    ) -> None:
+        assert getattr(test_user.profile, attr) != value
+        res = await authorized_client.put(
+            app.url_path_for("profiles:update-own-profile"),
+            json={"profile_update": {attr: value}},
+        )
+        assert res.status_code == status.HTTP_200_OK
+        profile = ProfilePublic(**res.json())
+        assert getattr(profile, attr) == value
+
+    @pytest.mark.parametrize(
+        "attr, value, status_code",
+        (
+                ("full_name", [], 422),
+                ("bio", {}, 422),
+                ("image", "./image-string.png", 422),
+                ("image", 5, 422),
+        ),
+    )
+    async def test_user_recieves_error_for_invalid_update_params(
+            self,
+            app: FastAPI,
+            authorized_client: AsyncClient,
+            test_user: UserInDB,
+            attr: str,
+            value: str,
+            status_code: int,
+    ) -> None:
+        res = await authorized_client.put(
+            app.url_path_for("profiles:update-own-profile"),
+            json={"profile_update": {attr: value}},
+        )
+        assert res.status_code == status_code
+
+
